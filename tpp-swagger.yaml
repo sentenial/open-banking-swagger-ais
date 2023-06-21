@@ -1,0 +1,1828 @@
+swagger: '2.0'
+info:
+  description: Swagger Spec for the Nuapay TPP OpenBanking/PSD2. Provides AISP Endpoints
+  version: '1.6.0'
+  title: Nuapay TPP AISP API Specification
+  contact:
+    name: Nuapay
+    email: 'api.support@nuapay.com'
+  license:
+    name: 'Nuapay'
+    url: 'https://sentenial.com'
+  x-logo:
+    backgroundColor: '#FFFFFF'
+    url: 'https://www.nuapay.com/wp-content/uploads/2018/04/nuapay.svg'
+host: 'api.nuapay.com'
+basePath: /tpp
+schemes: 
+  - https
+tags:
+  - name: Bank Service
+    description: |-
+      Bank endpoints allow a merchant to,
+      - Retrieve a list of banks that support the Open Banking scheme
+      - View details of a specific bank that supports the Open Banking scheme
+  - name: AISP Consent Management Service
+    description: |-
+      The Account Information endpoints allow you to,
+      - Request consent from a PSU for access to his/her account(s), balance(s) and transactions.
+      - Retrieve the account details to which the PSU has granted consent.
+      - Revoke the account access consent.
+      - Handle the account access ASPSP callback, if you are using the SELF_HOSTED_CALLBACK integration type
+      
+      To initiate the consent you will need your client's account-holding bank details (the PSU's ASPSP). Use the Get Banks service to list the ASPSPs supported by the TPP. Please find the service specification under https://sentenial.github.io/open-banking-swagger/docs/redoc.html#tag/Bank-Service
+  - name: AISP Account Information Read Service
+    description: |-
+      The Account Information Read endpoints allow you to:
+      - List Accounts
+      - Read Account Details
+      - Retrieve Account Balances
+      - Retrieve Account Transactions
+paths:
+  /accounts:
+    get:
+      tags:
+        - AISP Account Information Read Service
+      summary: List  accounts under granted access permissions.
+      description: List PSU Accounts
+      operationId: listPSUAccountsUsingGET
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Consent-Id
+          type: string
+          description: The Account Access Consent Reference. The reference representing a PSU consent, created as part of the Create Account Information Access Consent call. 
+          required: true
+        - name: Customer-IP-Address
+          in: header
+          description: The PSU's IP address if the PSU is currently logged in with the TPP.
+          required: false
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/AccountsResponseEnvelope'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        422:
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "T0000"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+              - code: "TXXXX"
+                description: Consent not found.
+                field: null
+              - code: "TXXXX"
+                description: Consent not in a valid status.
+                field: null
+        429:
+          description: Too Many Requests
+          x-sentenial:
+            enriched: "true"
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+          - openbanking_aisp_read
+        - MerchantApiKey: []
+  /bankfamilies:
+    get:
+      tags:
+        - Bank Service
+      summary: View Bank Families
+      description: Get list of Bank Families
+      operationId: getBankFamiliesUsingGET
+      produces:
+        - application/json
+      parameters:
+        - name: pagenumber
+          in: query
+          description: Page number
+          required: false
+          type: integer
+          default: 1
+          format: int32
+        - name: pagesize
+          in: query
+          description: Page size
+          required: false
+          type: integer
+          default: 20
+          format: int32 
+        - name: supportedcurrencies
+          in: query
+          required: false
+          type: array
+          items:
+            type: string
+            enum:
+              - EUR
+              - GBP
+              - PLN
+              - BGN
+              - HRK
+              - CZK
+              - DKK
+              - HUF
+              - RON
+              - SEK
+          collectionFormat: multi
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/PaginatedListBankFamiliesResponseEnvelope'
+          examples:
+            application/json:
+              uri: /bankFamilies
+              data: 
+                - id: 8ww64y0phx
+                  uri: /bankFamilies/8ww64y0phx
+                  name: Nuapay France
+                  logo: https://www.nuapay.com/wp-content/uploads/2018/04/nuapay.svg
+                  supportedCurrencies:
+                  - EUR
+                - id: 1xf48y2zds
+                  uri: /bankFamilies/1xf48y2zds
+                  name: Nuapay UK
+                  logo: https://www.nuapay.com/wp-content/uploads/2018/04/nuapay.svg
+                  supportedCurrencies:
+                  - GBP      
+              page:
+                pageNumber: 1
+                pageSize: 10
+                totalElements: 2
+                totalPages: 1
+              sort: []             
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "T0000"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "T0001"
+                description: Page  is invalid
+                field: page          
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        429:
+          description: Too Many Requests
+          x-sentenial:
+            enriched: "true"
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+        - MerchantApiKey: []
+        - PartnerOAuth2:
+          - openbanking_aisp
+        - PartnerApiKey: []
+  /bankfamilies/{bankfamilyId}:
+    get:
+      tags:
+        - Bank Service
+      summary: View Bank Family
+      description: View Bank Family Details
+      operationId: getBankFamilyUsingGET
+      produces:
+        - application/json
+      parameters:
+        - name: bankfamilyId
+          in: path
+          description: Bank Family id returned by Get Bank Families endpoint.
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/BankFamilyResponseEnvelope'
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "T0000"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "T0001"
+                description: Page  is invalid
+                field: page          
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        429:
+          description: Too Many Requests
+          x-sentenial:
+            enriched: "true"
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null          
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+        - MerchantApiKey: []
+        - PartnerOAuth2:
+          - openbanking_aisp
+        - PartnerApiKey: [] 
+  /banks:
+    get:
+      tags:
+        - Bank Service
+      summary: Retrieve Banks
+      description: Get Supported Banks On This TPP
+      operationId: getBanksUsingGET
+      produces:
+        - application/json
+      parameters:
+        - name: country
+          in: query
+          required: false
+          type: array
+          description: CountryCode - ISO country code - indicates where bank is domiciled (ISO 3166 Alpha-2)
+          items:
+            type: string
+          collectionFormat: multi
+        - name: debtoraccountrequired
+          in: query
+          required: false
+          type: boolean
+          description: Allows to filter the banks that requires debtor account to be provided when initiating payment.
+        - name: pagenumber
+          in: query
+          description: Page number
+          required: false
+          type: integer
+          default: 1
+          format: int32
+        - name: pagesize
+          in: query
+          description: Page size
+          required: false
+          type: integer
+          default: 20
+          format: int32 
+        - name: supportedcurrencies
+          in: query
+          required: false
+          type: array
+          items:
+            type: string
+            enum:
+              - EUR
+              - GBP
+              - PLN
+              - BGN
+              - HRK
+              - CZK
+              - DKK
+              - HUF
+              - RON
+              - SEK
+          collectionFormat: multi
+        - name: bankfamilyid
+          in: query
+          description: Allows filtering by Bank Family via the Bank Family Id.
+          required: false
+          type: string
+        - name: excludebankfamily
+          in: query
+          description: Allows filtering by Banks without an associated Bank Family.
+          required: false
+          type: boolean
+        - name: services
+          in: query
+          description: Filter the bank list by service provided returns both AISPs and PISPs, 'AISP' returns only AISPs and 'PISP' returns only PISPs. When not provided returns all banks regardless of service.
+          required: false
+          type: array
+          items:
+            type: string
+            enum:
+              - AISP
+              - PISP
+          collectionFormat: multi                    
+        - name: sepainstantreachability
+          in: query
+          description: Filter the bank list by payment method. When not provided or false, returns the full list of banks. When true, the only banks that supports SEPA Instant Payments are returned.
+          required: false
+          type: boolean
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/BanksResponse'
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "T0000"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "T0001"
+                description: Page  is invalid
+                field: page          
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+        429:
+          description: Too Many Requests
+          x-sentenial:
+            enriched: "true"
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+        - MerchantApiKey: []
+        - PartnerOAuth2:
+          - openbanking_aisp
+        - PartnerApiKey: []
+  /banks/{bankId}:
+    get:
+      tags:
+        - Bank Service
+      summary: View Bank
+      description: View Bank Details
+      operationId: getBankUsingGET
+      produces:
+        - application/json
+      parameters:
+        - name: bankId
+          in: path
+          description: Bank id returned by Get Supported Banks endpoint.
+          required: true
+          type: string
+      responses:
+        501:
+          description: Not implemented
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null                            
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+        - MerchantApiKey: []
+        - PartnerOAuth2:
+          - openbanking_aisp
+        - PartnerApiKey: []
+  /consents:
+    post:
+      tags:
+        - AISP Consent Management Service
+      summary: Create Account Information Access Consent
+      description: Create an account consent request POST endpoint
+      operationId: createAccountConsentUsingPOST
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: accountConsentRequest
+          description: Create a Account Consent Request
+          required: true
+          schema:
+            $ref: '#/definitions/AccountConsentRequest'
+        - name: Idempotency-Key
+          in: header
+          x-sentenial:
+            enriched: "true"
+          description: Every request will be processed only once per Idempotency-Key.  The Idempotency Key will be valid for 24 hours.
+          required: false
+          type: string
+          maxLength: 50
+        - name: Customer-IP-Address
+          in: header
+          description: The PSU's IP address if the PSU is currently logged in with the TPP.
+          required: false
+          type: string
+      responses:
+        201:
+          description: Created
+          schema:
+            $ref: '#/definitions/AccountConsentResponseEnvelope'
+          examples:
+            application/json:
+              uri: /consents/re27gry2dw
+              data: 
+               id: re27gry2dw
+               uri: /consents/re27gry2dw
+               countryCode: DE
+               language: en
+               integrationType: SELF_HOSTED
+               merchantPostAuthUrl: https://merchant.openbanking.com/result
+               aspspAuthUrl: https://any-aspsp.com/openbanking/authorize?response_type=code+id_token&scope=openid+payments&client_id=377aaa6a-70bf-4e95-ac19-2bac5270bacd&redirect_uri=https%3A%2F%2Fapi.nuapay.com%2Ftpp%2Fpayment-requests%2Foauth&state=df78b5f6-12c0-4646-b47c-4362217acb0a&nonce=bea92693-19da-4609-858e-86c79e908a08&request=eyJraWQiOiI2QlJZamgtc0VRUTNmNWlzc0lxWU9WNGNXdVUiLCJ0eXAiOiJKV1QiLCJhbGciOiJQUzI1NiJ9.eyJpc3MiOiIzNzdhYWE2YS03MGJmLTRlOTUtYWMxOS0yYmFjNTI3MGJhY2QiLCJyZXNwb25zZV90eXBlIjoiY29kZSBpZF90b2tlbiIsIm5vbmNlIjoiYmVhOTI2OTMtMTlkYS00NjA5LTg1OGUtODZjNzllOTA4YTA4IiwiY2xpZW50X2lkIjoiMzc3YWFhNmEtNzBiZi00ZTk1LWFjMTktMmJhYzUyNzBiYWNkIiwibWF4X2FnZSI6ODY0MDAsImF1ZCI6Imh0dHBzOlwvXC9hdXRob3Jpc2UtYXBpLmxsb3lkc2JhbmsuY28udWtcL3Byb2QwMVwvY2hhbm5lbFwvbHlkcyIsInNjb3BlIjoib3BlbmlkIHBheW1lbnRzIiwiY2xhaW1zIjp7InVzZXJpbmZvIjp7Im9wZW5iYW5raW5nX2ludGVudF9pZCI6eyJ2YWx1ZSI6IjY0YWQ5NWEwLWUzMWYtNGNiOC04NjM3LTdjOGRmOTc3MTJmOSIsImVzc2VudGlhbCI6dHJ1ZX19LCJpZF90b2tlbiI6eyJvcGVuYmFua2luZ19pbnRlbnRfaWQiOnsidmFsdWUiOiI2NGFkOTVhMC1lMzFmLTRjYjgtODYzNy03YzhkZjk3NzEyZjkiLCJlc3NlbnRpYWwiOnRydWV9LCJhY3IiOnsiZXNzZW50aWFsIjp0cnVlLCJ2YWx1ZXMiOlsidXJuOm9wZW5iYW5raW5nOnBzZDI6c2NhIiwidXJuOm9wZW5iYW5raW5nOnBzZDI6Y2EiXX19fSwicmVkaXJlY3RfdXJpIjoiaHR0cHM6XC9cL2FwaS5udWFwYXkuY29tXC90cHBcL3BheW1lbnQtcmVxdWVzdHNcL29hdXRoIiwic3RhdGUiOiJkZjc4YjVmNi0xMmMwLTQ2NDYtYjQ3Yy00MzYyMjE3YWNiMGEiLCJleHAiOjE1NzU0NTg3MTYsImlhdCI6MTU3NTQ1ODQxNiwianRpIjoiNDQyYmY4N2YtYzIxNC00NjgxLTk3ODYtZjIwZGM1YjIzOWYxIn0.IyeHKQQeU6x32CdUllkskLFWEjkJZKzvp8D4ZOwtlN3v32qmbh4hkGtwNilqZetqqq1ESB1InzfyAlb5S3GyZ_1pTV5UmFqsY60w4jIvSVQXmxKyCYIDrdgTvfa3IYOtA3vStpRpnHyXZfke7mBLGM0nn3YLEmujQ88T1kzq8v9rKTUKwgAE-NYLsYnXNg8dNlrl_lvXVou-J26keS5EaYMVSwHRXcZ8Vp51Hro5L3Py5KyG270RL-7AfJCrEOcvwKbHWOYthoZj1FcuuJWoCT80H1rtkw80vI8QpaQHhp8xYOGft4n6uf2WBhUVb9eBrl9B0GtWe3opBeFXzOtKyg
+               accessPermissions:
+                - ACCOUNTS_LIST_READ
+                - ACCOUNT_DETAILS_READ
+                - ACCOUNT_BALANCE_READ
+                - ACCOUNT_TRANSACTIONS_LIST_READ
+               merchantId: j29p3glnbx
+               creationDateTime: "2020-05-01T08:25:29.291Z"
+               expirationDateTime: "2020-05-01T23:25:59.999Z"
+               status: PENDING_APPROVAL
+               links: [ ]
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "T0000"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "T0004"
+                description: Field is invalid
+                field: iban
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        415:
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        422:
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "T0000"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "T0016"
+                description: Partial access can't be set for GB accounts.
+                field: countryCode
+        429:
+          description: Too Many Requests
+          x-sentenial:
+            enriched: "true"
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+        - MerchantApiKey: []
+  /consents/callback:
+    post:
+      tags:
+        - AISP Consent Management Service
+      summary: Forward Accounts Access Consent Callback
+      description: Forward  Accounts Access Consent Callback POST endpoint
+      operationId: forwardAccountAccessConsentCallbackPOST
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: accountAccessConsentCallbackRequest
+          description: Create an Account Access Consent Callback Request
+          required: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+            example:
+              code: KaIpmx
+              state: 3410742c-304d-4311-a54f-323f1f20f96f
+        - name: Idempotency-Key
+          in: header
+          description: Every request will be processed only once per Idempotency-Key.  The Idempotency Key will be valid for 24 hours.
+          required: false
+          x-sentenial:
+            enriched: "true"
+          type: string
+          maxLength: 50
+      responses:
+        202:
+          description: ACCEPTED
+          headers:
+            Location:
+              type: string
+              description: Holds uri of consent that was mapped using provided callback parameters
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "T0000"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "T0004"
+                description: Field is invalid
+                field: email
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        415:
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        422:
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "T0000"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "XXXXX"
+                description: No payment matched based on provided parameters.
+                field: null
+        429:
+          description: Too Many Requests
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          x-sentenial:
+            enriched: "true"
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp_callback
+        - PartnerOAuth2:
+          - openbanking_aisp_callback
+        - SystemOAuth2:
+          - openbanking_aisp_callback
+  /consents/{consentId}:
+    patch:
+      tags:
+      - AISP Consent Management Service
+      summary: Set Bank Id and Submit 
+      description: Set Bank Id and Submit
+      operationId: setBankIdForConsentUsingPATCH
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - name: consentId
+        in: path
+        description: The ID of the consent for which you want to update bankId.
+        required: true
+        type: string
+      - in: body
+        name: setBankForConsent
+        description: Set Bank For Create Consent Request
+        required: true
+        schema:
+          $ref: '#/definitions/SetBankConsentRequest'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/AccountConsentResponseEnvelope'
+          examples:
+            application/json:
+              uri: /consents/re27gry2dw
+              data: 
+                id: re27gry2dw
+                uri: /consents/re27gry2dw
+                countryCode: DE
+                language: en
+                integrationType: SELF_HOSTED
+                merchantPostAuthUrl: https://merchant.openbanking.com/result
+                aspspAuthUrl: https://any-aspsp.com/openbanking/authorize?response_type=code+id_token&scope=openid+payments&client_id=377aaa6a-70bf-4e95-ac19-2bac5270bacd&redirect_uri=https%3A%2F%2Fapi.nuapay.com%2Ftpp%2Fpayment-requests%2Foauth&state=df78b5f6-12c0-4646-b47c-4362217acb0a&nonce=bea92693-19da-4609-858e-86c79e908a08&request=eyJraWQiOiI2QlJZamgtc0VRUTNmNWlzc0lxWU9WNGNXdVUiLCJ0eXAiOiJKV1QiLCJhbGciOiJQUzI1NiJ9.eyJpc3MiOiIzNzdhYWE2YS03MGJmLTRlOTUtYWMxOS0yYmFjNTI3MGJhY2QiLCJyZXNwb25zZV90eXBlIjoiY29kZSBpZF90b2tlbiIsIm5vbmNlIjoiYmVhOTI2OTMtMTlkYS00NjA5LTg1OGUtODZjNzllOTA4YTA4IiwiY2xpZW50X2lkIjoiMzc3YWFhNmEtNzBiZi00ZTk1LWFjMTktMmJhYzUyNzBiYWNkIiwibWF4X2FnZSI6ODY0MDAsImF1ZCI6Imh0dHBzOlwvXC9hdXRob3Jpc2UtYXBpLmxsb3lkc2JhbmsuY28udWtcL3Byb2QwMVwvY2hhbm5lbFwvbHlkcyIsInNjb3BlIjoib3BlbmlkIHBheW1lbnRzIiwiY2xhaW1zIjp7InVzZXJpbmZvIjp7Im9wZW5iYW5raW5nX2ludGVudF9pZCI6eyJ2YWx1ZSI6IjY0YWQ5NWEwLWUzMWYtNGNiOC04NjM3LTdjOGRmOTc3MTJmOSIsImVzc2VudGlhbCI6dHJ1ZX19LCJpZF90b2tlbiI6eyJvcGVuYmFua2luZ19pbnRlbnRfaWQiOnsidmFsdWUiOiI2NGFkOTVhMC1lMzFmLTRjYjgtODYzNy03YzhkZjk3NzEyZjkiLCJlc3NlbnRpYWwiOnRydWV9LCJhY3IiOnsiZXNzZW50aWFsIjp0cnVlLCJ2YWx1ZXMiOlsidXJuOm9wZW5iYW5raW5nOnBzZDI6c2NhIiwidXJuOm9wZW5iYW5raW5nOnBzZDI6Y2EiXX19fSwicmVkaXJlY3RfdXJpIjoiaHR0cHM6XC9cL2FwaS5udWFwYXkuY29tXC90cHBcL3BheW1lbnQtcmVxdWVzdHNcL29hdXRoIiwic3RhdGUiOiJkZjc4YjVmNi0xMmMwLTQ2NDYtYjQ3Yy00MzYyMjE3YWNiMGEiLCJleHAiOjE1NzU0NTg3MTYsImlhdCI6MTU3NTQ1ODQxNiwianRpIjoiNDQyYmY4N2YtYzIxNC00NjgxLTk3ODYtZjIwZGM1YjIzOWYxIn0.IyeHKQQeU6x32CdUllkskLFWEjkJZKzvp8D4ZOwtlN3v32qmbh4hkGtwNilqZetqqq1ESB1InzfyAlb5S3GyZ_1pTV5UmFqsY60w4jIvSVQXmxKyCYIDrdgTvfa3IYOtA3vStpRpnHyXZfke7mBLGM0nn3YLEmujQ88T1kzq8v9rKTUKwgAE-NYLsYnXNg8dNlrl_lvXVou-J26keS5EaYMVSwHRXcZ8Vp51Hro5L3Py5KyG270RL-7AfJCrEOcvwKbHWOYthoZj1FcuuJWoCT80H1rtkw80vI8QpaQHhp8xYOGft4n6uf2WBhUVb9eBrl9B0GtWe3opBeFXzOtKyg
+                accessPermissions:
+                 - ACCOUNTS_LIST_READ
+                 - ACCOUNT_DETAILS_READ
+                 - ACCOUNT_BALANCE_READ
+                 - ACCOUNT_TRANSACTIONS_LIST_READ
+                merchantId: j29p3glnbx
+                creationDateTime: "2020-05-01T08:25:29.291Z"
+                expirationDateTime: "2020-05-01T23:25:59.999Z"
+                status: PENDING_APPROVAL
+                links:
+                  type: array
+                  items:
+                    $ref: '#/definitions/RestResponseLink'
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "TBD"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "TBD"
+                description: Field is invalid
+                field: bankId
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        404:
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        415:
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null            
+        422:
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: "TBD"
+              returnDescription: Validation errors occurred. Please see details.
+              details:
+                code: "TBD"
+                description: The consent can't be processed with provided bank.
+                field: bankId
+        429:
+          description: Too Many Requests
+          x-sentenial:
+            enriched: "true"
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+        - MerchantApiKey: []
+    get:
+      tags:
+        - AISP Consent Management Service
+      summary: Retrieve Account Access Consent Details
+      description: GET account access consent details endpoint
+      operationId: getAccountConsentUsingGET
+      produces: 
+        - application/json
+      parameters:
+        - name: consentId
+          in: path
+          description: Consent Id being retrieved.
+          required: true
+          type: string
+        - name: Customer-IP-Address
+          in: header
+          description: The PSU's IP address if the PSU is currently logged in with the TPP.
+          required: false
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/AccountConsentResponseEnvelope'
+          examples:
+            application/json:
+              uri: /consents/re27gry2dw
+              data: 
+               id: re27gry2dw
+               uri: /consents/re27gry2dw
+               countryCode: DE
+               language: en
+               integrationType: SELF_HOSTED
+               merchantPostAuthUrl: https://merchant.openbanking.com/result
+               aspspAuthUrl: null;
+               accessPermissions:
+                - ACCOUNTS_LIST_READ
+                - ACCOUNT_DETAILS_READ
+                - ACCOUNT_BALANCE_READ
+                - ACCOUNT_TRANSACTIONS_LIST_READ
+               merchantId: j29p3glnbx
+               creationDateTime: "2020-05-01T08:25:29.291Z"
+               expirationDateTime: "2020-05-01T23:25:59.999Z"
+               status: ACTIVE
+               links: [ ]
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        404:
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        429:
+          description: Too Many Requests
+          x-sentenial:
+            enriched: "true"
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+          - openbanking_aisp_read
+        - MerchantApiKey: []
+  /consents/{consentId}/revoke:
+    post:
+      tags:
+        - AISP Consent Management Service
+      summary: Revoke Account Access Consent
+      description: Revoke account access consent endpoint
+      operationId: revokeAccountConsentUsingPOST
+      consumes:
+        - application/json
+      produces: 
+        - application/json
+      parameters:
+        - name: consentId
+          in: path
+          description: Consent Id being retrieved.
+          required: true
+          type: string
+        - name: Idempotency-Key
+          in: header
+          x-sentenial:
+            enriched: "true"
+          description: Every request will be processed only once per Idempotency-Key.  The Idempotency Key will be valid for 24 hours.
+          required: false
+          type: string
+          maxLength: 50
+        - name: Customer-IP-Address
+          in: header
+          description: The PSU's IP address if the PSU is currently logged in with the TPP.
+          required: false
+          type: string
+      responses:
+        202:
+          description: ACCEPTED
+          headers:
+            Location:
+              type: string
+              description: Holds uri of consent that was mapped using provided request parameters
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        403:
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        404:
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        405:
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+        429:
+          description: Too Many Requests
+          x-sentenial:
+            enriched: "true"
+          headers:
+            Retry-After:
+              type: integer
+              format: int32
+              description: Number in seconds to wait
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+          examples:
+            application/json:
+              returnCode: null
+              returnDescription: null
+              details: null
+      security:
+        - MerchantOAuth2:
+          - openbanking_aisp
+        - MerchantApiKey: []
+securityDefinitions:
+  MerchantApiKey:
+    type: basic
+  PartnerApiKey:
+    type: basic
+  MerchantOAuth2:
+    type: oauth2
+    tokenUrl: https://api.nuapay.com/oauth/token_key
+    flow: password
+    scopes:
+      openbanking_aisp: Account Information Service Provider access
+      openbanking_aisp_read: Account Information Service Provider read access
+      openbanking_aisp_callback: Open Banking AISP callback forwarding access
+  PartnerOAuth2:
+    type: oauth2
+    tokenUrl: https://api.nuapay.com/oauth/token_key
+    flow: password
+    scopes:
+      openbanking_aisp: Account Information Service Provider access
+      openbanking_aisp_read: Account Information Service Provider read access
+      openbanking_aisp_callback: Open Banking AISP callback forwarding access
+  SystemOAuth2:
+    type: oauth2
+    tokenUrl: https://api.nuapay.com/oauth/token_key
+    flow: password
+    scopes:
+      openbanking_aisp: Account Information Service Provider access
+      openbanking_aisp_read: Account Information Service Provider read access
+      openbanking_aisp_callback: Open Banking AISP callback forwarding access
+definitions:
+  Account:
+    type: object
+    properties: 
+      id: 
+        type: string
+        description:  Account Identification as assigned by ASPSP
+      uri:
+        type: string
+        description: Uri of account resource.
+      accountIdentification:
+        $ref: "#/definitions/AccountIdentificationData"
+      currency:
+        type: string
+        description: Account ISO currency code 
+        pattern: '[A-Z]{3}'
+      name: 
+        type: string
+        description: Account owner name
+        minLength: 1
+        maxLength: 70
+      displayName: 
+        type: string
+        description: Name of the account, as defined by ASPSP in online channels.
+        minLength: 1
+        maxLength: 70
+      product:
+        type: string
+        description: Product name of the bank for this account, proprietary definition.
+        minLength: 1
+        maxLength: 35
+      cashAccountType:
+        type: string
+        description: ExternalCashAccountType1Code from ISO 20022. See https://www.iso20022.org/sites/default/files/2020-08/ExternalCodeSets_2Q2020_August2020_v1.xlsx 27-CashAccountType sheet
+      status:
+        type: string
+        description: |
+           Account status. The value is one of the following:
+           * `ENABLED`: account is available
+           * `DELETED`: account is terminated
+           * `BLOCKED`: account is blocked e.g. for legal reasons
+          
+           If this field is not used, than the account is available in the sense of this specification.
+        enum:
+        - ENABLED
+        - DELETED
+        - BLOCKED
+      bic:
+        type: string
+        description: BIC of account holding bank
+        pattern: '[A-Z]{6,6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3,3}){0,1}'
+      linkedAccounts:
+        type: string
+        description: Case of a set of pending card transactions, the APSP will provide the relevant cash account the card is set up on.
+        minLength: 1
+        maxLength: 70
+      usage:
+        type: string
+        description: |
+          Specifies the usage of the account:
+
+           * PRIV: private personal account
+           * ORGA: professional account
+        enum:
+          - PRIV
+          - ORGA
+      details:
+        type: string
+        description: |
+          Specifications that might be provided by the ASPSP:
+            * characteristics of the account
+            * characteristics of the relevant card
+      balances:
+        type: array
+        description:  A list of balances regarding this account, e.g. the current balance, the last booked balance. The list might be restricted to the current balance.s
+        items: 
+          $ref: '#/definitions/Balance'
+      links:
+        type: array
+        items:
+          $ref: '#/definitions/RestResponseLink'
+  AccountIdentificationData:
+    type: object
+    required:
+      - identification
+      - schemeName
+    properties:
+      identification:
+        type: string
+        description: Identification assigned by an institution to identify an account. This identification is known by the account owner.
+        minLength: 1
+        maxLength: 34     
+      name:
+        type: string
+        description: "Name of the account, as assigned by the account servicing institution,
+          in agreement with the account owner in order to provide an additional means
+          of identification of the account. Usage: The account name is different from
+          the account owner name. The account name is used in certain user communities
+          to provide a means of identifying the account, in addition to the account
+          owner's identity and the account number."
+        minLength: 1
+        maxLength: 70
+      schemeName:
+        type: string
+        description: Name of the identification scheme, in a coded form as published in an external list.
+        enum:
+          - IBAN
+          - BBAN
+          - SortCodeAccountNumber
+      secondaryIdentification:
+        type: string
+        description: Identification assigned by an institution to identify an account.
+          This identification is known by the account owner.
+        minLength: 1
+        maxLength: 34
+    title: Account Identification
+    description: Unambiguous identification of the account of the debtor to which a debit entry will be made as a result of the transaction.
+  Amount:
+   type: object
+   required:
+     - amount
+     - currency
+   description: Amount of money of the cash balance. 
+   properties:
+     amount:
+       type: string
+       description: Balance amount. The decimal separator is a dot.
+     currency:
+      type: string
+      description: ISO Currency Code
+      pattern: '[A-Z]{3}'
+  Balance: 
+    type: object
+    properties: 
+      balanceAmount:
+        $ref: '#/definitions/Amount'
+      debitCreditIndicator:
+        type: string
+        description: Indicates whether the balance is a credit or a debit balance. Note that zero balance is returned as `CREDIT`.
+        enum:
+        - DEBIT
+        - CREDIT
+      balanceType:
+        type: string
+        description: Type of the balance.
+        enum:
+         - CLOSING_BOOKED
+         - EXPECTED
+         - OPENING_BOOKED
+         - INTERIM_AVAILABLE
+         - INTERIM_BOOKED
+         - FORWARD_AVAILABLE
+         - NON_INVOICED
+      creditLimitIncluded:
+          type: boolean
+          description: A flag indicating if the credit limit of the corresponding account is included in the calculation of the balance, where applicable.
+      lastChangeDateTime:
+        type: string
+        format: date-time
+        description: This data element might be used to indicate e.g. with the expected or booked balance that no action is known on the account, which is not yet booked.
+      referenceDate:
+        description: Reference date of the balance.
+        type: string
+        format: date-time
+      lastCommittedTransaction:
+        description: |
+          "entryReference" of the last commited transaction to support the TPP in identifying whether all 
+          PSU transactions are already known.
+        type: string
+        minLength: 1
+        maxLength: 35
+  AccountConsentRequest:
+    description: Create Account Access Consent Request
+    type: object
+    required:
+        - countryCode
+        - integrationType
+        - accessPermissions
+    properties:
+      countryCode:
+        type: string
+        description: Country code - ISO country code - indicates where customer is domiciled (ISO 3166 Alpha-2)
+        pattern: ^[A-Z]{2}$
+      language:
+        type: string
+        description: The customer's preferred language, defaults to en ISO 639-1. Two-letter codes.
+        pattern: ^[a-z]{2}$
+      email:
+        type: string
+        description: PSU email address.
+        minLength: 1
+        maxLength: 254
+        pattern: .*@.*
+      integrationType:
+        type: string
+        description: Allows to specify customer integration type. Available options are `CHECKOUT`, `REDIRECT`, `SELF_HOSTED` and `SELF_HOSTED_CALLBACK`. Read more on Developer Docs.
+        enum:
+        - CHECKOUT
+        - REDIRECT
+        - SELF_HOSTED
+        - SELF_HOSTED_CALLBACK
+      merchantPostAuthUrl:
+        type: string
+        description: The customer url to redirect PSU post authorization step. 
+        minLength: 1
+        maxLength: 255
+      bankId:
+        type: string
+        description: The bank id returned by the List Banks API. This is the bank in which the PSU holds an account.
+        minLength: 1
+        maxLength: 10
+      accessPermissions:
+        type: array
+        description: |-
+          The requested access services for a consent are determined by the specification of the ASPSP. 
+
+          Permissions the customer can as for are:
+            * `ACCOUNTS_LIST_READ` - Mandatory to get access to account balance(s) and transaction resources.
+            * `ACCOUNT_DETAILS_READ` - Required to retrieve account details
+            * `ACCOUNT_BALANCE_READ` - Required to retrieve account balances as a standalone call. 
+            * `ACCOUNT_TRANSACTIONS_LIST_READ` - Required to retrieve account transactions.
+        items: 
+          type: string
+          enum:
+            - ACCOUNTS_LIST_READ
+            - ACCOUNT_DETAILS_READ
+            - ACCOUNT_BALANCE_READ
+            - ACCOUNT_TRANSACTIONS_LIST_READ
+        minItems: 1
+        uniqueItems: true
+    title: CreateConsentRequest
+    example:
+      countryCode: DE
+      language: en
+      email: psu@email.com
+      integrationType: SELF_HOSTED
+      merchantPostAuthUrl: https://merchant.openbanking.com/result
+      bankId: lyboxy9bqp
+      accessPermissions:
+        - ACCOUNTS_LIST_READ
+        - ACCOUNT_DETAILS_READ
+        - ACCOUNT_BALANCE_READ
+        - ACCOUNT_TRANSACTIONS_LIST_READ
+  AccountConsentResponseEnvelope:
+    type: object
+    required:
+      - data
+      - uri
+    properties:
+      uri:
+        type: string
+        description: Holds resource uri.
+      data:
+        $ref: '#/definitions/AccountConsentResponse'    
+  AccountConsentResponse:
+    type: object
+    properties: 
+      id: 
+        type: string
+        description:  Consent Id.
+      uri:
+       type: string
+       description:  Uri of consent resource
+      countryCode:
+        type: string
+        description: countryCode - ISO country code - indicates where customer is
+          domiciled (ISO 3166 Alpha-2)
+        pattern: ^[A-Z]{2}$
+      language:
+        type: string
+        description: |
+          the customers preferred language, defaults to en ISO 639-1:
+          two-letter codes, one per language'
+        pattern: ^[a-z]{2}$
+      email:
+        type: string
+        description: PSU email address.
+        minLength: 1
+        maxLength: 254
+        pattern: .*@.*
+      integrationType:
+        type: string
+        description: Allows to specify if the UI integration is done via Checkout, Redirect or it is Self Hosted by the merchant.
+        enum:
+        - CHECKOUT
+        - REDIRECT
+        - SELF_HOSTED
+        - SELF_HOSTED_CALLBACK
+      merchantPostAuthUrl:
+        type: string
+        description: The merchant url to redirect PSU post authorization step. The field is required for following integration types SELF_HOSTED, SELF_HOSTED_CALLBACK.
+        minLength: 1
+        maxLength: 255
+      aspspAuthUrl:
+        type: string
+        description: The ASPSP url to redirect the PSU for authorization of the consent.
+        minLength: 1
+        maxLength: 2048        
+      bankId:
+        type: string
+        description: The bank id returned by the List Banks API. This is the bank in which the PSU holds an account.
+        minLength: 1
+        maxLength: 10
+      accessPermissions:
+        type: array
+        description: |-
+          Requested access services for a consent are determined by the specification of an ASPSP.
+          Merchant can request an access for a dedicated account for Berlin Group specified ASPSPs only.
+          In this case the psuAccounts property is mandatory.
+        items: 
+          type: string
+          enum:
+          - ACCOUNTS_LIST_READ
+          - ACCOUNT_DETAILS_READ
+          - ACCOUNT_BALANCE_READ
+          - ACCOUNT_TRANSACTIONS_LIST_READ
+      merchantId:
+        type: string
+        description: The ID of the merchant associated to the account access
+      creationDateTime:
+        type: string
+        format: date-time
+        description: Creation date and time for the account access resource
+      expirationDateTime:
+        type: string
+        format: date-time
+        description: Expiration date and time of the consent.
+      status:
+        type: string
+        description: The latest account access status
+        enum:
+          - PENDING
+          - PENDING_APPROVAL
+          - OAUTH_CALLBACK_COMPLETE
+          - DECLINED
+          - EXPIRED
+          - ACTIVE
+          - REVOKED
+          - CONSENT_API_REJECTED
+          - UNEXPECTED_ERROR
+      links:
+        type: array
+        items:
+          $ref: '#/definitions/RestResponseLink'
+  AccountsResponseEnvelope:
+    type: object
+    required:
+      - data
+      - uri
+    properties:
+      uri:
+        type: string
+        description: Holds resource uri.
+      data:
+        type: array
+        items: 
+          $ref: '#/definitions/Account' 
+      page:
+        $ref: '#/definitions/AispResourcesPageObject'
+      sort:
+        type: array
+        items:
+          type: string
+  AispResourcesPageObject:
+    type: object
+    description: Links relevant to the payload
+    properties:
+      self:
+        type: string
+      first:
+        type: string
+      prev:
+        type: string
+      next:
+        type: string
+      last:
+        type: string
+      totalPages:
+        type: integer
+        format: int32
+    required:
+      - self      
+  RestResponseLink:
+    type: object
+    properties:
+      id:
+        type: string
+        description: 'Encoded Id of linked resource'
+      resourceType:
+        type: string
+        description: Resource Type
+      uri:
+        type: string
+        description: Resource URI
+  ErrorResponse:
+    type: object
+    properties:
+      details:
+        type: array
+        description: Holds list of input validation errors
+        items:
+          $ref: '#/definitions/ErrorDetail'
+      returnCode:
+        type: string
+        description: Error type code
+      returnDescription:
+        type: string
+        description: Error type description
+    title: ErrorResponse
+  ErrorDetail:
+    type: object
+    properties:
+      code:
+        type: string
+        description: Error code
+      description:
+        type: string
+        description: Error description
+      field:
+        type: string
+        description: JSON path to request object property the error is related to
+      resourceUri:
+        type: string
+    title: ErrorDetail
+  SetBankConsentRequest:
+    type: object
+    required:
+      - bankId
+    properties:
+      bankId:
+        type: string
+        description: The bank id returned by List Banks API. This is the bank where PSU holds its account.
+        minLength: 1
+        maxLength: 10
+    example:
+      bankId: ybo8zd8j2q
+  PaginatedListBankFamiliesResponseEnvelope:
+    type: object
+    required:
+      - uri
+      - data
+      - page
+      - sort    
+    properties:
+      uri:
+        type: string
+        description: resource Uri
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/BankFamilyResponse'
+      page:
+        $ref: '#/definitions/RestResponsePaginationDetails'
+      sort:
+        type: array
+        items:
+          type: string
+    title: PaginatedListBankFamiliesResponseEnvelope                
+  BanksResponse:
+    type: object
+    required:
+      - data
+      - uri
+      - page
+      - sort
+    properties:
+      uri:
+        type: string
+        description: Holds queried resource uri.
+      data:
+        type: array
+        description: Banks collection
+        items:
+          $ref: '#/definitions/Bank'
+      page:
+        $ref: '#/definitions/RestResponsePaginationDetails'
+      sort:
+        type: array
+        items:
+          type: string
+    title: BanksResponse
+    example:
+      uri: /banks
+      data: 
+       - id: 8ow24y2pdx
+         uri: /banks/8ow24y2pdx
+         name: Nuapay
+         logo: https://www.nuapay.com/wp-content/uploads/2018/04/nuapay.svg
+         supportedCurrencies:
+         - GBP
+         - EUR
+         country: GB
+         countries: 
+          - GB
+          - IE
+         debtorAccountRequired: false
+         lastUpdateDateTime: "2019-02-28T10:43:07.00Z"
+         bankMetaData:
+           debtorAddress: required
+           creditorAddress: required
+           remittanceInformation: optional
+           psuId: notSupported
+           customerIpAddress: notSupported
+           sepaInstantReachability: true
+           minimumPaymentValue: 0.01
+           maximumPaymentValue: 9999.99
+         services:
+          - AISP
+          - PISP                      
+         links:
+         -
+          id: 8ww64y0phx
+          resourceType: bankFamily
+          uri: /bankFamilies/8ww64y0phx         
+      page:
+        pageNumber: 1
+        pageSize: 10
+        totalElements: 1
+        totalPages: 1
+      sort: []
+  BankFamilyResponse:
+    type: object
+    required:
+      - id
+      - uri
+      - name
+      - logo
+      - supportedCurrencies
+    properties:
+      id:
+        type: string
+        description: The Banks Family Id, used to group branches belong to the same Bank
+      uri:
+        type: string
+        description: Uri to Bank Family Resource
+      name:
+        type: string
+        description: The Bank Family Name
+      logo:
+        type: string
+        description: The Bank Family Logo http location
+      supportedCurrencies:
+        type: array
+        description: Holds list of payment currencies that the Bank Family can process.
+        items: 
+          type: string
+          description: ISO currency code.
+      links:
+        type: array
+        items:
+          $ref: '#/definitions/RestResponseLink'
+    title: BankFamilyResponse   
+  BankFamilyResponseEnvelope:
+    type: object
+    required:
+      - data
+      - uri
+    properties:
+      uri:
+        type: string
+        description: Holds queried resource uri.
+      data:
+        type: array
+        description: Bank Family collection
+        items:
+          $ref: '#/definitions/BankFamilyResponse'
+    title: BankFamilyResponseEnvelope
+    example:
+      uri: /bankFamily/
+      data: 
+        id: 8ww64y0phx
+        uri: /bankFamilies/8ww64y0phx
+        name: Nuapay France
+        logo: https://www.nuapay.com/wp-content/uploads/2018/04/nuapay.svg
+        supportedCurrencies:
+        - EUR        
+  Bank:
+    type: object
+    required:
+      - id
+      - uri
+      - logo
+      - name
+      - supportedCurrencies
+      - country
+      - countries
+      - debtorAccountRequired
+      - services
+    properties:
+      id:
+        type: string
+        description: The Banks Id
+      uri:
+        type: string
+        description: Uri to Bank Resource
+      name:
+        type: string
+        description: The Banks Name
+      logo:
+        type: string
+        description: The Banks Logo http location
+      supportedCurrencies:
+        type: array
+        description: Holds list of payment currencies that the bank can process.
+        items: 
+          type: string
+          description: ISO currency code. 
+      country:
+        type: string
+        description: The main country the bank operates. ISO country code - indicates where the Bank is located (ISO 3166 Alpha-2)
+      countries:
+        type: array
+        description: Holds the list of countries the bank operates. 
+        items: 
+          type: string
+          description: ISO country code - indicates where the Bank is located (ISO 3166 Alpha-2)
+      debtorAccountRequired:
+        type: boolean
+        description: TRUE if debtorAccount is required by Aspsp.
+      lastUpdateDateTime:
+        type: string
+        format: date-time
+        description: Last date and time when bank's settings were updated.
+      bankMetaData:
+        $ref: '#/definitions/BankMetaData'
+      services:
+        type: array
+        description: AISP if bank provides only AISP services and PISP if bank provides only PISP services.
+        items: 
+          type: string
+          description: Either AISP or PISP.                  
+      links:
+        type: array
+        items:      
+          $ref: '#/definitions/RestResponseLink'        
+    title: Bank
+  BankMetaData:
+    type: object
+    description: Array containing additional bank meta data, includes parameters that are either required, optional or not supported at a specific bank
+    properties:
+      debtorAddress:
+        type: string
+        description: Indicates if 'Debtor Address' is required by the bank. Returns either, 'required', 'optional' or 'notSupported'.
+      creditorAddress:
+        type: string
+        description: Indicates if 'Creditor Address' is required by the bank. Returns either, 'required', 'optional' or 'notSupported'.
+      remittanceInformation:
+        type: string
+        description: Indicates if 'Remittance Information' is required by the bank. Returns either, 'required', 'optional' or 'notSupported'.
+      psuId:
+        type: string
+        description: Indicates if 'PSU-ID' is required by the bank. Returns either, 'required', 'optional' or 'notSupported'.
+      customerIpAddress:
+        type: string
+        description: Indicates if 'Customer IP Address' is required by the bank. Returns either, 'required', 'optional' or 'notSupported'.
+      sepaInstantReachability:
+        type: boolean
+        description: Indicates if SEPA instant payments are supported by the bank.
+      minimumPaymentValue:
+        type: number
+        description: Indicates the minimum payment value accepted by the bank. A value of 0.00 indicates this parameter is not supported by the bank. 
+      maximumPaymentValue:
+        type: number
+        description: Indicates the maximum payment value accepted by the bank. A value of 0.00 indicates this parameter is not supported by the bank.
+  RestResponsePaginationDetails:
+    type: object
+    properties:
+      pageNumber:
+        type: integer
+        format: int32
+        description: Page Number
+      pageSize:
+        type: integer
+        format: int32
+        description: Page Size
+      totalElements:
+        type: integer
+        format: int32
+        description: Total Number of elements returned. Response parameter only
+      totalPages:
+        type: integer
+        format: int32
+        description: Total Number of pages returned. Response parameter only
